@@ -4,6 +4,9 @@ use std::{
     fs::File,
     io::{BufRead, BufReader, Error, ErrorKind},
 };
+use tasks::{Task, Tasks};
+
+mod tasks;
 
 const TASKS_FILE: &str = "tasks.txt";
 
@@ -14,8 +17,6 @@ const TASKS_FILE: &str = "tasks.txt";
 struct Cli {
     #[command(subcommand)]
     command: Commands,
-    // pattern: String,
-    // path: std::path::PathBuf,
 }
 
 #[derive(Debug, Subcommand)]
@@ -27,25 +28,14 @@ enum Commands {
     List,
 
     /// mark a task as complete
-    Complete { number: i32 },
+    Complete { number: usize },
 
     /// remove a task
-    Remove { number: i32 },
-}
-
-#[derive(Debug)]
-struct Tasks {
-    map: HashMap<usize, Task>,
-}
-
-#[derive(Debug)]
-struct Task {
-    content: String,
-    completed: bool,
+    Remove { number: usize },
 }
 
 fn main() {
-    let tasks = match File::open(TASKS_FILE) {
+    let mut tasks = match File::open(TASKS_FILE) {
         Ok(file) => match parse_tasks(file) {
             Ok(tasks) => tasks,
             Err(e) => {
@@ -60,10 +50,14 @@ fn main() {
 
     let args = Cli::parse();
     match args.command {
-        Commands::Add { content } => handle_add_task(content),
+        Commands::Add { content } => tasks.add(content),
         Commands::List => handle_list_tasks(),
-        Commands::Complete { number } => handle_complete_task(number),
-        Commands::Remove { number } => handle_remove_task(number),
+        Commands::Complete { number } => {
+            tasks.complete(number);
+        }
+        Commands::Remove { number } => {
+            tasks.remove(number);
+        }
     }
 }
 
@@ -108,7 +102,4 @@ fn parse_task(line: String) -> Result<(usize, bool, String), Error> {
     return Ok((task_num, task_completed, task_content));
 }
 
-fn handle_add_task(_content: String) {}
 fn handle_list_tasks() {}
-fn handle_complete_task(_number: i32) {}
-fn handle_remove_task(_number: i32) {}
