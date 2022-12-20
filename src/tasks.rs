@@ -24,7 +24,7 @@ impl TaskStack {
 
     pub fn from_file(file_name: &str) -> Result<Self, Error> {
         let mut map: HashMap<usize, Task> = HashMap::new();
-        let mut tasks_file = match File::create(file_name) {
+        let tasks_file = match File::create(file_name) {
             Ok(file) => file,
             Err(e) => return Err(e),
         };
