@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 
-use tasks::{TaskStack};
+use tasks::TaskStack;
 
 mod tasks;
 
@@ -41,10 +41,10 @@ fn main() {
     match args.command {
         Commands::Add { content } => task_stack.add(content.join(" ")),
         Commands::List => {
-            for (task_num, task) in task_stack.tasks() {
-                println!("{}: {}", task_num, task.content);
+            for (task_num, task) in task_stack.tasks().enumerate() {
+                println!("{}: {}", task_num + 1, task.content);
             }
-        },
+        }
         Commands::Complete { number } => {
             match task_stack.complete(number) {
                 Ok(_) => (),

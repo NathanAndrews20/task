@@ -1,15 +1,15 @@
 use std::{
-    collections::{HashMap, hash_map::Iter},
     fs::File,
     io::{BufRead, BufReader, Error, ErrorKind, Write},
+    slice::Iter,
 };
 
 #[derive(Debug)]
 pub struct TaskStack {
-    pub map: HashMap<usize, Task>,
+    list: Vec<Task>,
 }
 
-pub type Tasks<'a> = Iter<'a, usize, Task>;
+pub type Tasks<'a> = Iter<'a, Task>;
 #[derive(Debug)]
 pub struct Task {
     pub content: String,
@@ -18,13 +18,11 @@ pub struct Task {
 
 impl TaskStack {
     pub fn new() -> Self {
-        Self {
-            map: HashMap::new(),
-        }
+        Self { list: vec![] }
     }
 
     pub fn from_file(file_name: &str) -> Result<Self, Error> {
-        let mut map: HashMap<usize, Task> = HashMap::new();
+        let mut list: Vec<Task> = vec![];
         let tasks_file = match File::open(file_name) {
             Ok(file) => file,
             Err(e) => return Err(e),
@@ -36,59 +34,54 @@ impl TaskStack {
             match reader.read_line(&mut line) {
                 Ok(0) => break,
                 Ok(_) => {
-                    let (num, completed, content) = match parse_task(line.clone()) {
+                    let (_, completed, content) = match parse_task(line.clone()) {
                         Ok(tuple) => tuple,
                         Err(e) => return Err(e),
                     };
-                    map.insert(num, Task { content, completed });
+                    list.push(Task { content, completed });
                     line.clear()
                 }
                 Err(e) => return Err(e),
             }
         }
 
-        return Ok(TaskStack { map });
+        return Ok(TaskStack { list });
     }
 
     pub fn add(&mut self, content: String) {
-        self.map.insert(
-            self.map.len() + 1,
-            Task {
-                content,
-                completed: false,
-            },
-        );
+        self.list.push(Task {
+            content,
+            completed: false,
+        });
     }
 
-    pub fn complete(&mut self, task_number: usize) -> Result<(), Error> {
-        match self.map.get(&task_number) {
-            Some(task) => self.map.insert(
-                task_number,
-                Task {
+    pub fn complete(&mut self, task_index: usize) -> Result<(), Error> {
+        match self.list.get(task_index) {
+            Some(task) => {
+                self.list[task_index] = Task {
                     content: task.content.to_string(),
                     completed: true,
-                },
-            ),
+                }
+            }
             None => {
                 return Err(Error::new(
                     std::io::ErrorKind::NotFound,
-                    format!("no task with number {}", task_number),
+                    format!("no task with number {}", task_index),
                 ))
             }
         };
         Ok(())
     }
 
-    pub fn remove(&mut self, task_number: usize) -> Result<(), Error> {
-        match self.map.remove(&task_number) {
-            Some(_) => Ok(()),
-            None => {
-                return Err(Error::new(
-                    std::io::ErrorKind::NotFound,
-                    format!("no task with number {}", task_number),
-                ))
-            }
+    pub fn remove(&mut self, task_index: usize) -> Result<(), Error> {
+        if task_index >= self.list.len() {
+            return Err(Error::new(
+                std::io::ErrorKind::Other,
+                format!("no task with number {task_index}, {task_index} is out of bounds"),
+            ));
         }
+        self.list.remove(task_index);
+        Ok(())
     }
 
     pub fn write_to_file(&mut self, file_name: &str) -> Result<(), Error> {
@@ -96,8 +89,8 @@ impl TaskStack {
             Ok(file) => file,
             Err(e) => return Err(e),
         };
-        for (task_num, Task { content, completed }) in &self.map {
-            let task_string = format!("{},{},{}\n", task_num, completed, content);
+        for (task_index, Task { content, completed }) in self.list.iter().enumerate() {
+            let task_string = format!("{},{},{}\n", task_index, completed, content);
             match tasks_file.write_all(&task_string.as_bytes()) {
                 Ok(_) => (),
                 Err(e) => return Err(e),
@@ -107,7 +100,7 @@ impl TaskStack {
     }
 
     pub fn tasks(&mut self) -> Tasks {
-        return self.map.iter();
+        return self.list.iter();
     }
 }
 
