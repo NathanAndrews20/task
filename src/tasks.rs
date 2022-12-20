@@ -98,6 +98,27 @@ impl TaskStack {
     pub fn tasks(&mut self) -> Tasks {
         return self.list.iter();
     }
+
+    pub fn num_tasks(&self) -> usize {
+        return self.list.len();
+    }
+
+    pub fn num_tasks_completed(&self) -> usize {
+        return self.list.iter().fold(0, |acc, cur| {
+            return acc + if cur.completed { 1 } else { 0 };
+        });
+    }
+
+    pub fn remove_completed(&mut self) -> bool {
+        let original_length = self.list.len();
+        for i in 0..self.list.len() - 1 {
+            let index_from_end = original_length - i;
+            if self.list[index_from_end].completed {
+                self.list.remove(index_from_end);
+            }
+        }
+        return self.list.len() < original_length;
+    }
 }
 
 fn parse_task(line: String) -> Result<(usize, bool, String), Error> {
