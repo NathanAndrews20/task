@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use ansi_term::Style;
 
 use tasks::TaskStack;
 
@@ -39,20 +40,44 @@ fn main() {
 
     let args = Cli::parse();
     match args.command {
-        Commands::Add { content } => task_stack.add(content.join(" ")),
-        Commands::List => {
-            for (task_num, task) in task_stack.tasks().enumerate() {
-                println!("{}: {}", task_num + 1, task.content);
+        Commands::Add {
+            content: raw_content,
+        } => {
+            let content = raw_content.join(" ").trim().to_string();
+            if !content.is_empty() {
+                task_stack.add(content)
+            } else {
+                println!("cannot add empty task")
             }
         }
-        Commands::Complete { number } => {
-            match task_stack.complete(number) {
+
+        Commands::List => {
+            for (task_num, task) in task_stack.tasks().enumerate() {
+                let task_content =  if task.completed {
+                    let style = Style::new();
+                    style.strikethrough().paint(task.content.clone()).to_string()
+                } else {
+                    task.content.clone()
+                };
+                println!("{}: {}", task_num + 1, task_content);
+            }
+        }
+        Commands::Complete { number: task_number } => {
+            if task_number < 1 {
+                println!("unable to mark task as completed: no task with number 0");
+                return
+            }
+            match task_stack.complete(task_number - 1) {
                 Ok(_) => (),
                 Err(e) => println!("unable to mark task as completed: {}", e),
             };
         }
-        Commands::Remove { number } => {
-            match task_stack.remove(number) {
+        Commands::Remove { number: task_number } => {
+            if task_number < 1 {
+                println!("unable to mark task as completed: no task with number 0");
+                return
+            }
+            match task_stack.remove(task_number - 1) {
                 Ok(_) => (),
                 Err(e) => println!("unable to remove task: {}", e),
             };
