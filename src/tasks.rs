@@ -57,7 +57,7 @@ impl Tasks {
         }
     }
 
-    pub fn write_to_file(&mut self, file_name: String) -> Result<(), Error> {
+    pub fn write_to_file(&mut self, file_name: &str) -> Result<(), Error> {
         let mut tasks_file = match File::create(file_name) {
             Ok(file) => file,
             Err(e) => return Err(e),

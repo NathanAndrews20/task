@@ -53,12 +53,22 @@ fn main() {
         Commands::Add { content } => tasks.add(content),
         Commands::List => handle_list_tasks(),
         Commands::Complete { number } => {
-            tasks.complete(number);
+            match tasks.complete(number) {
+                Ok(_) => (),
+                Err(e) => println!("unable to mark task as completed: {}", e),
+            };
         }
         Commands::Remove { number } => {
-            tasks.remove(number);
+            match tasks.remove(number) {
+                Ok(_) => (),
+                Err(e) => println!("unable to remove task: {}", e),
+            };
         }
     }
+    match tasks.write_to_file(TASKS_FILE) {
+        Ok(_) => (),
+        Err(e) => println!("unable to save changes: {}", e),
+    };
 }
 
 fn parse_tasks(file: File) -> Result<Tasks, Error> {
