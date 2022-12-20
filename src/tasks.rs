@@ -111,12 +111,7 @@ impl TaskStack {
 
     pub fn remove_completed(&mut self) -> bool {
         let original_length = self.list.len();
-        for i in 0..self.list.len() - 1 {
-            let index_from_end = original_length - i;
-            if self.list[index_from_end].completed {
-                self.list.remove(index_from_end);
-            }
-        }
+        self.list.retain(|t|!t.completed);
         return self.list.len() < original_length;
     }
 }

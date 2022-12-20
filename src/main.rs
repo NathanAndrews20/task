@@ -1,5 +1,5 @@
-use clap::{Parser, Subcommand};
 use ansi_term::Style;
+use clap::{ArgGroup, Parser, Subcommand};
 
 use tasks::TaskStack;
 
@@ -28,7 +28,14 @@ enum Commands {
     Complete { number: usize },
 
     /// remove a task
-    Remove { number: usize },
+    #[command(group(ArgGroup::new("remove").required(true).args(["number", "completed"])))]
+    Remove {
+        #[arg(short = 'n', long = "number")]
+        number: Option<usize>,
+
+        #[arg(short = 'c', long = "completed")]
+        completed: bool,
+    },
 }
 
 fn main() {
@@ -53,35 +60,51 @@ fn main() {
 
         Commands::List => {
             for (task_num, task) in task_stack.tasks().enumerate() {
-                let task_content =  if task.completed {
+                let task_content = if task.completed {
                     let style = Style::new();
-                    style.strikethrough().paint(task.content.clone()).to_string()
+                    style
+                        .strikethrough()
+                        .paint(task.content.clone())
+                        .to_string()
                 } else {
                     task.content.clone()
                 };
                 println!("{}: {}", task_num + 1, task_content);
             }
         }
-        Commands::Complete { number: task_number } => {
+        Commands::Complete {
+            number: task_number,
+        } => {
             if task_number < 1 {
                 println!("unable to mark task as completed: no task with number 0");
-                return
+                return;
             }
             match task_stack.complete(task_number - 1) {
                 Ok(_) => (),
                 Err(e) => println!("unable to mark task as completed: {}", e),
             };
         }
-        Commands::Remove { number: task_number } => {
-            if task_number < 1 {
-                println!("unable to mark task as completed: no task with number 0");
-                return
+        Commands::Remove {
+            number: number_option,
+            completed,
+        } => match (number_option, completed) {
+            (Some(task_number), _) => {
+                if task_number < 1 {
+                    println!("unable to mark task as completed: no task with number 0");
+                    return;
+                }
+                match task_stack.remove(task_number - 1) {
+                    Ok(_) => (),
+                    Err(e) => println!("unable to remove task: {}", e),
+                }
             }
-            match task_stack.remove(task_number - 1) {
-                Ok(_) => (),
-                Err(e) => println!("unable to remove task: {}", e),
-            };
-        }
+            (_, true) => {
+                if !task_stack.remove_completed() {
+                    println!("unable to removed tasks: no tasks marked as completed");
+                }
+            }
+            _ => unreachable!(),
+        },
     }
     match task_stack.write_to_file(TASKS_FILE) {
         Ok(_) => (),
