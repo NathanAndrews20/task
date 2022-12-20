@@ -22,7 +22,7 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Commands {
     /// add a task
-    Add { content: String },
+    Add { content: Vec<String> },
 
     /// list all tasks
     List,
@@ -50,7 +50,7 @@ fn main() {
 
     let args = Cli::parse();
     match args.command {
-        Commands::Add { content } => tasks.add(content),
+        Commands::Add { content } => tasks.add(content.join(" ")),
         Commands::List => handle_list_tasks(),
         Commands::Complete { number } => {
             match tasks.complete(number) {
@@ -107,7 +107,7 @@ fn parse_task(line: String) -> Result<(usize, bool, String), Error> {
         Err(e) => return Err(Error::new(ErrorKind::InvalidData, e)),
     };
 
-    let task_content = task_data_vec[2].to_string();
+    let task_content = task_data_vec[2].trim().to_string();
 
     return Ok((task_num, task_completed, task_content));
 }
