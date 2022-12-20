@@ -4,13 +4,12 @@ use std::{
     slice::Iter,
 };
 
-#[derive(Debug)]
 pub struct TaskStack {
     list: Vec<Task>,
 }
 
 pub type Tasks<'a> = Iter<'a, Task>;
-#[derive(Debug)]
+
 pub struct Task {
     pub content: String,
     pub completed: bool,
@@ -28,18 +27,15 @@ impl TaskStack {
             Err(e) => return Err(e),
         };
 
-        let mut reader = BufReader::new(tasks_file);
-        let mut line = String::new();
-        loop {
-            match reader.read_line(&mut line) {
-                Ok(0) => break,
-                Ok(_) => {
-                    let (_, completed, content) = match parse_task(line.clone()) {
+        let reader = BufReader::new(tasks_file);
+        for result in reader.lines() {
+            match result {
+                Ok(line) => {
+                    let (_, completed, content) = match parse_task(line) {
                         Ok(tuple) => tuple,
                         Err(e) => return Err(e),
                     };
                     list.push(Task { content, completed });
-                    line.clear()
                 }
                 Err(e) => return Err(e),
             }
