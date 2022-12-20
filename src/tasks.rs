@@ -1,11 +1,11 @@
 use std::{
     collections::HashMap,
     fs::File,
-    io::{Error, Write},
+    io::{BufRead, BufReader, Error, ErrorKind, Write},
 };
 
 #[derive(Debug)]
-pub struct Tasks {
+pub struct TaskStack {
     pub map: HashMap<usize, Task>,
 }
 
@@ -15,7 +15,40 @@ pub struct Task {
     pub completed: bool,
 }
 
-impl Tasks {
+impl TaskStack {
+    pub fn new() -> Self {
+        Self {
+            map: HashMap::new(),
+        }
+    }
+
+    pub fn from_file(file_name: &str) -> Result<Self, Error> {
+        let mut map: HashMap<usize, Task> = HashMap::new();
+        let mut tasks_file = match File::create(file_name) {
+            Ok(file) => file,
+            Err(e) => return Err(e),
+        };
+
+        let mut reader = BufReader::new(tasks_file);
+        let mut line = String::new();
+        loop {
+            match reader.read_line(&mut line) {
+                Ok(0) => break,
+                Ok(_) => {
+                    let (num, completed, content) = match parse_task(line.clone()) {
+                        Ok(tuple) => tuple,
+                        Err(e) => return Err(e),
+                    };
+                    map.insert(num, Task { content, completed });
+                    line.clear()
+                }
+                Err(e) => return Err(e),
+            }
+        }
+
+        return Ok(TaskStack { map });
+    }
+
     pub fn add(&mut self, content: String) {
         self.map.insert(
             self.map.len() + 1,
@@ -71,4 +104,22 @@ impl Tasks {
         }
         Ok(())
     }
+}
+
+fn parse_task(line: String) -> Result<(usize, bool, String), Error> {
+    let task_data_vec: Vec<&str> = line.splitn(3, ",").collect();
+
+    let task_num = match task_data_vec[0].parse::<usize>() {
+        Ok(b) => b,
+        Err(e) => return Err(Error::new(ErrorKind::InvalidData, e)),
+    };
+
+    let task_completed = match task_data_vec[1].parse::<bool>() {
+        Ok(b) => b,
+        Err(e) => return Err(Error::new(ErrorKind::InvalidData, e)),
+    };
+
+    let task_content = task_data_vec[2].trim().to_string();
+
+    return Ok((task_num, task_completed, task_content));
 }
