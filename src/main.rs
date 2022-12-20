@@ -32,32 +32,34 @@ enum Commands {
 
 fn main() {
     // todo, better error handling for incorrectly formatted task list
-    let mut tasks = match TaskStack::from_file(TASKS_FILE) {
-        Ok(tasks) => tasks,
+    let mut task_stack = match TaskStack::from_file(TASKS_FILE) {
+        Ok(ts) => ts,
         Err(_) => TaskStack::new(),
     };
 
     let args = Cli::parse();
     match args.command {
-        Commands::Add { content } => tasks.add(content.join(" ")),
-        Commands::List => handle_list_tasks(),
+        Commands::Add { content } => task_stack.add(content.join(" ")),
+        Commands::List => {
+            for (task_num, task) in task_stack.tasks() {
+                println!("{}: {}", task_num, task.content);
+            }
+        },
         Commands::Complete { number } => {
-            match tasks.complete(number) {
+            match task_stack.complete(number) {
                 Ok(_) => (),
                 Err(e) => println!("unable to mark task as completed: {}", e),
             };
         }
         Commands::Remove { number } => {
-            match tasks.remove(number) {
+            match task_stack.remove(number) {
                 Ok(_) => (),
                 Err(e) => println!("unable to remove task: {}", e),
             };
         }
     }
-    match tasks.write_to_file(TASKS_FILE) {
+    match task_stack.write_to_file(TASKS_FILE) {
         Ok(_) => (),
         Err(e) => println!("unable to save changes: {}", e),
     };
 }
-
-fn handle_list_tasks() {}

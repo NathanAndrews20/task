@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, hash_map::Iter},
     fs::File,
     io::{BufRead, BufReader, Error, ErrorKind, Write},
 };
@@ -9,6 +9,7 @@ pub struct TaskStack {
     pub map: HashMap<usize, Task>,
 }
 
+pub type Tasks<'a> = Iter<'a, usize, Task>;
 #[derive(Debug)]
 pub struct Task {
     pub content: String,
@@ -24,7 +25,7 @@ impl TaskStack {
 
     pub fn from_file(file_name: &str) -> Result<Self, Error> {
         let mut map: HashMap<usize, Task> = HashMap::new();
-        let tasks_file = match File::create(file_name) {
+        let tasks_file = match File::open(file_name) {
             Ok(file) => file,
             Err(e) => return Err(e),
         };
@@ -103,6 +104,10 @@ impl TaskStack {
             };
         }
         Ok(())
+    }
+
+    pub fn tasks(&mut self) -> Tasks {
+        return self.map.iter();
     }
 }
 
