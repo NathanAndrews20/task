@@ -80,7 +80,7 @@ impl TaskStack {
         Ok(())
     }
 
-    pub fn write_to_file(&mut self, file_name: &str) -> Result<(), Error> {
+    pub fn write_to_file(&self, file_name: &str) -> Result<(), Error> {
         let mut tasks_file = match File::create(file_name) {
             Ok(file) => file,
             Err(e) => return Err(e),
@@ -95,7 +95,7 @@ impl TaskStack {
         Ok(())
     }
 
-    pub fn tasks(&mut self) -> Tasks {
+    pub fn tasks(&self) -> Tasks {
         return self.list.iter();
     }
 
