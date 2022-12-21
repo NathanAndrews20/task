@@ -2,9 +2,9 @@ use ansi_term::Style;
 use clap::{ArgGroup, Parser, Subcommand};
 
 use indicatif::{ProgressBar, ProgressStyle};
-use tasks::TaskStack;
+use task_stack::TaskStack;
 
-mod tasks;
+mod task_stack;
 
 const TASKS_FILE: &str = "tasks.txt";
 
