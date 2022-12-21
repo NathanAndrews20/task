@@ -62,22 +62,22 @@ impl TaskStack {
             None => {
                 return Err(Error::new(
                     std::io::ErrorKind::NotFound,
-                    format!("no task with number {}", task_index),
+                    format!("no task with number {task_index}"),
                 ))
             }
         };
-        Ok(())
+        return Ok(());
     }
 
     pub fn remove(&mut self, task_index: usize) -> Result<(), Error> {
         if task_index >= self.list.len() {
             return Err(Error::new(
                 std::io::ErrorKind::Other,
-                format!("no task with number {task_index}, {task_index} is out of bounds"),
+                format!("no task with number {task_index}"),
             ));
         }
         self.list.remove(task_index);
-        Ok(())
+        return Ok(());
     }
 
     pub fn write_to_file(&self, file_name: &str) -> Result<(), Error> {
@@ -111,7 +111,7 @@ impl TaskStack {
 
     pub fn remove_completed(&mut self) -> bool {
         let original_length = self.list.len();
-        self.list.retain(|t|!t.completed);
+        self.list.retain(|t| !t.completed);
         return self.list.len() < original_length;
     }
 }
