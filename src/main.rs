@@ -71,8 +71,9 @@ fn main() {
                     task_stack.num_tasks() - task_stack.num_tasks_completed()
                 );
                 let bar = ProgressBar::new(task_stack.num_tasks() as u64);
+                bar.set_message("tasks");
                 bar.set_style(
-                    ProgressStyle::with_template("[{wide_bar:.cyan/black}] {pos}/{len}")
+                    ProgressStyle::with_template("{msg}: [{bar:60.cyan/black}] {pos}/{len}")
                         .unwrap()
                         .progress_chars("#|-"),
                 );
