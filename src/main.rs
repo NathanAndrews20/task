@@ -1,6 +1,9 @@
+use std::{thread, time::Duration};
+
 use ansi_term::Style;
 use clap::{ArgGroup, Parser, Subcommand};
 
+use indicatif::{ProgressBar, ProgressStyle};
 use tasks::TaskStack;
 
 mod tasks;
@@ -22,7 +25,10 @@ enum Commands {
     Add { content: Vec<String> },
 
     /// list all tasks
-    List,
+    List {
+        #[arg(short = 'p', long = "progress")]
+        progress: bool,
+    },
 
     /// mark a task as complete
     Complete { number: usize },
@@ -58,18 +64,26 @@ fn main() {
             }
         }
 
-        Commands::List => {
-            for (task_num, task) in task_stack.tasks().enumerate() {
-                let task_content = if task.completed {
-                    let style = Style::new();
-                    style
-                        .strikethrough()
-                        .paint(task.content.clone())
-                        .to_string()
-                } else {
-                    task.content.clone()
-                };
-                println!("{}: {}", task_num + 1, task_content);
+        Commands::List { progress } => {
+            if progress {
+                println!("total tasks: {}, completed tasks: {}, tasks remaining: {}", task_stack.num_tasks(), task_stack.num_tasks_completed(), task_stack.num_tasks() - task_stack.num_tasks_completed());
+                let bar = ProgressBar::new(task_stack.num_tasks() as u64);                
+                bar.set_style(ProgressStyle::with_template("[{wide_bar:.cyan/black}] {pos}/{len}").unwrap().progress_chars("#|-"));
+                bar.inc(task_stack.num_tasks_completed() as u64);
+                bar.abandon();
+            } else {
+                for (task_num, task) in task_stack.tasks().enumerate() {
+                    let task_content = if task.completed {
+                        let style = Style::new();
+                        style
+                            .strikethrough()
+                            .paint(task.content.clone())
+                            .to_string()
+                    } else {
+                        task.content.clone()
+                    };
+                    println!("{}: {}", task_num + 1, task_content);
+                }
             }
         }
         Commands::Complete {
