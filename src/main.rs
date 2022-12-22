@@ -8,9 +8,8 @@ use task_stack::TaskStack;
 
 mod task_stack;
 
-const TASKS_FILE: &str = "tasks.txt";
+const TASKS_FILE: &str = ".tasks/tasks";
 const TASKS_DIR: &str = ".tasks";
-
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -145,7 +144,9 @@ fn main() {
             _ => unreachable!(),
         }),
     };
-    println!("{result}");
+    if !result.is_empty() {
+        println!("{result}");
+    }
 }
 
 fn with_task_stack(closure: impl Fn(&mut TaskStack) -> String) -> String {
