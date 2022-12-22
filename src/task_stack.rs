@@ -24,7 +24,7 @@ impl TaskStack {
         let mut list: Vec<Task> = vec![];
         let tasks_file = match File::open(file_name) {
             Ok(file) => file,
-            Err(e) => return Err(e),
+            Err(_) => return Ok(Self::new()),
         };
 
         let reader = BufReader::new(tasks_file);

@@ -43,11 +43,7 @@ enum Commands {
 }
 
 fn main() {
-    // todo, better error handling for incorrectly formatted task list
-    let mut task_stack = match TaskStack::from_file(TASKS_FILE) {
-        Ok(ts) => ts,
-        Err(_) => TaskStack::new(),
-    };
+    let mut task_stack = TaskStack::new();
 
     let args = Cli::parse();
     match args.command {
@@ -63,6 +59,13 @@ fn main() {
         }
 
         Commands::List { progress } => {
+            task_stack = match TaskStack::from_file(TASKS_FILE) {
+                Ok(ts) => ts,
+                Err(e) => {
+                    println!("unable to load tasks: {e}");
+                    return;
+                }
+            };
             if progress {
                 println!(
                     "total tasks: {}, completed tasks: {}, tasks remaining: {}",
@@ -97,6 +100,13 @@ fn main() {
         Commands::Complete {
             number: task_number,
         } => {
+            task_stack = match TaskStack::from_file(TASKS_FILE) {
+                Ok(ts) => ts,
+                Err(e) => {
+                    println!("unable to load tasks: {e}");
+                    return;
+                }
+            };
             if task_number < 1 {
                 println!("unable to mark task as completed: no task with number {task_number}");
                 return;
@@ -109,24 +119,33 @@ fn main() {
         Commands::Remove {
             number: number_option,
             completed,
-        } => match (number_option, completed) {
-            (Some(task_number), _) => {
-                if task_number < 1 {
-                    println!("unable to remove task: no task with number {task_number}");
+        } => {
+            task_stack = match TaskStack::from_file(TASKS_FILE) {
+                Ok(ts) => ts,
+                Err(e) => {
+                    println!("unable to load tasks: {e}");
                     return;
                 }
-                match task_stack.remove((task_number - 1) as usize) {
-                    Ok(_) => (),
-                    Err(e) => println!("unable to remove task: {}", e),
+            };
+            match (number_option, completed) {
+                (Some(task_number), _) => {
+                    if task_number < 1 {
+                        println!("unable to remove task: no task with number {task_number}");
+                        return;
+                    }
+                    match task_stack.remove((task_number - 1) as usize) {
+                        Ok(_) => (),
+                        Err(e) => println!("unable to remove task: {}", e),
+                    }
                 }
-            }
-            (_, true) => {
-                if !task_stack.remove_completed() {
-                    println!("unable to remove tasks: no tasks marked as completed");
+                (_, true) => {
+                    if !task_stack.remove_completed() {
+                        println!("unable to remove tasks: no tasks marked as completed");
+                    }
                 }
+                _ => unreachable!(),
             }
-            _ => unreachable!(),
-        },
+        }
     }
     match task_stack.write_to_file(TASKS_FILE) {
         Ok(_) => (),
