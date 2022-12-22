@@ -1,10 +1,12 @@
 use std::{
     fs::File,
     io::{BufRead, BufReader, Error, ErrorKind, Write},
+    path::Path,
     slice::Iter,
 };
 
 pub struct TaskStack {
+    name: String,
     list: Vec<Task>,
 }
 
@@ -17,14 +19,30 @@ pub struct Task {
 
 impl TaskStack {
     pub fn new() -> Self {
-        Self { list: vec![] }
+        Self {
+            name: "miscellaneous".to_string(),
+            list: vec![],
+        }
     }
 
-    pub fn from_file(file_name: &str) -> Result<Self, Error> {
+    pub fn from_file(file_path: &Path) -> Result<Self, Error> {
         let mut list: Vec<Task> = vec![];
-        let tasks_file = match File::open(file_name) {
+        let group_name: &str = match file_path.file_name() {
+            Some(os_str) => match os_str.to_str() {
+                Some(str) => str,
+                None => "[group-name]",
+            },
+            None => "[group-name]",
+        };
+
+        let tasks_file = match File::open(file_path) {
             Ok(file) => file,
-            Err(_) => return Ok(Self::new()),
+            Err(_) => {
+                return Err(Error::new(
+                    std::io::ErrorKind::NotFound,
+                    format!("no task group named \"{group_name}\""),
+                ))
+            }
         };
 
         let reader = BufReader::new(tasks_file);
@@ -41,7 +59,14 @@ impl TaskStack {
             }
         }
 
-        return Ok(TaskStack { list });
+        return Ok(TaskStack {
+            name: group_name.to_string(),
+            list,
+        });
+    }
+
+    pub fn name(&self) -> String {
+        self.name.to_string()
     }
 
     pub fn add(&mut self, content: String) {
@@ -61,7 +86,7 @@ impl TaskStack {
             }
             None => {
                 return Err(Error::new(
-                    std::io::ErrorKind::NotFound,
+                    std::io::ErrorKind::InvalidInput,
                     format!("no task with number {task_index}"),
                 ))
             }
@@ -80,8 +105,8 @@ impl TaskStack {
         return Ok(());
     }
 
-    pub fn write_to_file(&self, file_name: &str) -> Result<(), Error> {
-        let mut tasks_file = match File::create(file_name) {
+    pub fn write_to_file(&self, file_path: &Path) -> Result<(), Error> {
+        let mut tasks_file = match File::create(file_path) {
             Ok(file) => file,
             Err(e) => return Err(e),
         };
