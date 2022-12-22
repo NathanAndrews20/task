@@ -36,7 +36,6 @@ enum Commands {
         #[arg(short = 'a', long = "all")]
         all: bool,
 
-        #[arg(short = 'g', long = "group_name")]
         group_name: Option<OsString>,
 
         #[arg(short = 'p', long = "progress")]
@@ -199,7 +198,7 @@ fn with_task_stack(
         Ok(_) => (),
         Err(e) => return format!("unable to save changes: {}", e),
     };
-    
+
     return result;
 }
 
