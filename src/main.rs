@@ -1,3 +1,5 @@
+use std::{fs, path::Path};
+
 use ansi_term::Style;
 use clap::{ArgGroup, Parser, Subcommand};
 
@@ -7,6 +9,8 @@ use task_stack::TaskStack;
 mod task_stack;
 
 const TASKS_FILE: &str = "tasks.txt";
+const TASKS_DIR: &str = ".tasks";
+
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -43,29 +47,33 @@ enum Commands {
 }
 
 fn main() {
-    let mut task_stack = TaskStack::new();
+    // create the .tasks directory if it does not exists
+    match fs::create_dir_all(Path::new(TASKS_DIR)) {
+        Ok(_) => (),
+        Err(e) => {
+            println!("unable to load tasks: {e}");
+            return;
+        }
+    };
 
+    // parse the CLI
     let args = Cli::parse();
-    match args.command {
+
+    // handle the commands
+    let result = match args.command {
         Commands::Add {
             content: raw_content,
-        } => {
+        } => with_task_stack(|task_stack| {
             let content = raw_content.join(" ").trim().to_string();
             if !content.is_empty() {
-                task_stack.add(content)
+                task_stack.add(content);
+                return String::new();
             } else {
-                println!("cannot add empty task")
+                return String::from("cannot add empty task");
             }
-        }
+        }),
 
-        Commands::List { progress } => {
-            task_stack = match TaskStack::from_file(TASKS_FILE) {
-                Ok(ts) => ts,
-                Err(e) => {
-                    println!("unable to load tasks: {e}");
-                    return;
-                }
-            };
+        Commands::List { progress } => with_task_stack(|task_stack| {
             if progress {
                 println!(
                     "total tasks: {}, completed tasks: {}, tasks remaining: {}",
@@ -82,6 +90,7 @@ fn main() {
                 );
                 bar.inc(task_stack.num_tasks_completed() as u64);
                 bar.abandon();
+                return String::new();
             } else {
                 for (task_num, task) in task_stack.tasks().enumerate() {
                     let task_content = if task.completed {
@@ -95,60 +104,59 @@ fn main() {
                     };
                     println!("{}: {}", task_num + 1, task_content);
                 }
+                return String::new();
             }
-        }
+        }),
+
         Commands::Complete {
             number: task_number,
-        } => {
-            task_stack = match TaskStack::from_file(TASKS_FILE) {
-                Ok(ts) => ts,
-                Err(e) => {
-                    println!("unable to load tasks: {e}");
-                    return;
-                }
-            };
+        } => with_task_stack(|task_stack| {
             if task_number < 1 {
-                println!("unable to mark task as completed: no task with number {task_number}");
-                return;
+                return format!(
+                    "unable to mark task as completed: no task with number {task_number}"
+                );
             }
             match task_stack.complete((task_number - 1) as usize) {
-                Ok(_) => (),
-                Err(e) => println!("unable to mark task as completed: {}", e),
-            };
-        }
+                Ok(_) => String::new(),
+                Err(e) => return format!("unable to mark task as completed: {}", e),
+            }
+        }),
+
         Commands::Remove {
             number: number_option,
             completed,
-        } => {
-            task_stack = match TaskStack::from_file(TASKS_FILE) {
-                Ok(ts) => ts,
-                Err(e) => {
-                    println!("unable to load tasks: {e}");
-                    return;
+        } => with_task_stack(|task_stack| match (number_option, completed) {
+            (Some(task_number), _) => {
+                if task_number < 1 {
+                    return format!("unable to remove task: no task with number {task_number}");
                 }
-            };
-            match (number_option, completed) {
-                (Some(task_number), _) => {
-                    if task_number < 1 {
-                        println!("unable to remove task: no task with number {task_number}");
-                        return;
-                    }
-                    match task_stack.remove((task_number - 1) as usize) {
-                        Ok(_) => (),
-                        Err(e) => println!("unable to remove task: {}", e),
-                    }
+                match task_stack.remove((task_number - 1) as usize) {
+                    Ok(_) => String::new(),
+                    Err(e) => format!("unable to remove task: {}", e),
                 }
-                (_, true) => {
-                    if !task_stack.remove_completed() {
-                        println!("unable to remove tasks: no tasks marked as completed");
-                    }
-                }
-                _ => unreachable!(),
             }
-        }
-    }
+            (_, true) => {
+                if !task_stack.remove_completed() {
+                    return format!("unable to remove tasks: no tasks marked as completed");
+                } else {
+                    String::new()
+                }
+            }
+            _ => unreachable!(),
+        }),
+    };
+    println!("{result}");
+}
+
+fn with_task_stack(closure: impl Fn(&mut TaskStack) -> String) -> String {
+    let mut task_stack = match TaskStack::from_file(TASKS_FILE) {
+        Ok(ts) => ts,
+        Err(e) => return format!("unable to load tasks: {e}"),
+    };
+    let result = closure(&mut task_stack);
     match task_stack.write_to_file(TASKS_FILE) {
         Ok(_) => (),
-        Err(e) => println!("unable to save changes: {}", e),
+        Err(e) => return format!("unable to save changes: {}", e),
     };
+    return result;
 }
