@@ -1,6 +1,6 @@
 use std::{ffi::OsString, fs, io::ErrorKind, path::Path};
 
-use ansi_term::Style;
+use ansi_term::{Color, Style};
 use clap::{ArgGroup, Parser, Subcommand};
 
 use indicatif::{ProgressBar, ProgressStyle};
@@ -109,11 +109,13 @@ fn main() {
                 };
                 for entry in files {
                     match entry {
-                        Ok(file) => with_task_stack(false, file.file_name(), |task_stack| {
-                            print_progress(task_stack);
-                            return String::new();
-                        }),
-                        Err(_) => todo!(),
+                        Ok(file) => {
+                            with_task_stack(false, file.file_name(), |task_stack| {
+                                print_progress(task_stack);
+                                return String::new();
+                            });
+                        }
+                        Err(_) => println!("error reading tasks file"),
                     };
                 }
                 String::new()
@@ -219,15 +221,18 @@ fn print_list(task_stack: &TaskStack) {
 
 fn print_progress(task_stack: &TaskStack) {
     println!(
-        "total tasks: {}, completed tasks: {}, tasks remaining: {}",
-        task_stack.num_tasks(),
-        task_stack.num_tasks_completed(),
-        task_stack.num_tasks() - task_stack.num_tasks_completed()
+        " {}",
+        Color::Green.bold().underline().paint(format!(
+            "{}: {}/{}",
+            task_stack.name(),
+            task_stack.num_tasks_completed(),
+            task_stack.num_tasks(),
+        )),
     );
     let bar = ProgressBar::new(task_stack.num_tasks() as u64);
     bar.set_message(task_stack.name());
     bar.set_style(
-        ProgressStyle::with_template("{msg}: [{bar:60.cyan/black}] {pos}/{len}")
+        ProgressStyle::with_template("[{bar:60.cyan/black}] {pos}/{len}")
             .unwrap()
             .progress_chars("#|-"),
     );
